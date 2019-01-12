@@ -155,7 +155,7 @@ function SetEventPrice ()
        barInfo = FetchBarInfoById(events[i].barId);
        price = events[i].time * barInfo[0]+events[i].persons * barInfo[1];
 
-       price=GroupReduction(price,barInfo[1]);
+       price=GroupReduction(price,events[i].persons);
        events[i].price = price;
   }
 }
@@ -167,12 +167,12 @@ function GroupReduction (price, numberPeople)
     result = price/2;
   }
   else{
-    if(numberPeople >=20){
-      result = price-price*30/100;
+    if(numberPeople >= 20){
+      result = price*0.70;
     }
     else{
       if(numberPeople >= 10){
-        result = price-price*10/100;
+        result = price*0.9;
       }else {
         result = price;
       }
@@ -191,7 +191,66 @@ function FetchBarInfoById (id)
     return result;
 }
 
+function SetCommission()
+{
+  var commissionTot;
+    for (var i = 0; i < events.length; i++) {
+      commissionTot = events[i].price*0.7;
+      events[i].commission.insurance = commissionTot/2;
+      events[i].commission.treasury = events[i].persons;
+      events[i].commission.privateaser = commissionTot -events[i].commission.insurance-events[i].commission.treasury;
+    }
+}
+
+function SetDeductibleOption() {
+  for (var i = 0; i < events.length; i++) {
+    if(events[i].options.deductibleReduction == true){
+      var priceAugmentation = events[i].persons;
+      events[i].price += priceAugmentation;
+      events[i].commission.privateaser += priceAugmentation;
+    }
+  }
+}
+
+function SetPaymentActors(){
+  for (var i = 0; i < actors.length; i++) {
+    var event = FetchEventById(actors[i].eventId);
+    for (var j = 0; j < actors[i].payment.length; j++) {
+      switch (actors[i].payment[j].who) {
+        case 'booker':
+          actors[i].payment[j].amount = event.price;
+          break;
+        case 'bar':
+          actors[i].payment[j].amount = event.price - (event.commission.insurance + event.commission.treasury + event.commission.privateaser);
+          break;
+        case 'insurance':
+          actors[i].payment[j].amount = event.commission.insurance;
+          break;
+        case 'treasury':
+          actors[i].payment[j].amount = event.commission.treasury;
+          break;
+        case 'privateaser':
+          actors[i].payment[j].amount = event.commission.privateaser;
+        default:
+          break;
+      }
+    }
+  }
+}
+
+function FetchEventById(id){
+  for (var i = 0; i < events.length; i++) {
+    if(id == events[i].id){
+      var result = events[i];
+    }
+  }
+  return result;
+}
+
 SetEventPrice();
+SetCommission();
+SetDeductibleOption();
+SetPaymentActors();
 console.log(bars);
 console.log(events);
 console.log(actors);
